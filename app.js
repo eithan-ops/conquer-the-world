@@ -32,7 +32,7 @@
       board: '🏆 טבלת שיאים', world: 'עולם', country: 'מדינה', city: 'עיר', friends: 'חברים', today: 'היום', week: 'השבוע', all: 'כל הזמנים',
       yourCode: 'קוד החבר שלך', addFriend: 'הוסף חבר לפי קוד', add: 'הוסף', friendAdded: '{n} נוסף לחברים!', friendFail: 'קוד לא נמצא', noRows: 'עדיין אין תוצאות — תהיה הראשון!',
       inviteRoom: '📲 הזמן חברים', inviteText: 'בוא לשחק איתי "לכבוש את העולם"! קוד חדר: {code}', commentator: '🎙️ פרשן (רק אצלך)', commentatorOn: 'הפרשן פועל', commentatorOff: 'הפרשן כבוי',
-      rankToday: 'מקום {r} בעולם היום', back: 'חזרה', me: 'אני', offline: 'אין חיבור לשרת — משחק סולו בלבד', you2: 'אתה',
+      colorChanged: 'הצבע שלך היה תפוס — קיבלת צבע חדש', rankToday: 'מקום {r} בעולם היום', back: 'חזרה', me: 'אני', offline: 'אין חיבור לשרת — משחק סולו בלבד', you2: 'אתה',
     },
     en: {
       title: 'Conquer the World', tagline: 'Answer right — the country is yours. Take as much of Earth as you can.',
@@ -60,7 +60,7 @@
       board: '🏆 Leaderboard', world: 'World', country: 'Country', city: 'City', friends: 'Friends', today: 'Today', week: 'This week', all: 'All time',
       yourCode: 'Your friend code', addFriend: 'Add a friend by code', add: 'Add', friendAdded: '{n} added!', friendFail: 'Code not found', noRows: 'No scores yet — be the first!',
       inviteRoom: '📲 Invite friends', inviteText: 'Come play "Conquer the World" with me! Room code: {code}', commentator: '🎙️ Commentator (host only)', commentatorOn: 'Commentator on', commentatorOff: 'Commentator off',
-      rankToday: '#{r} in the world today', back: 'Back', me: 'me', offline: 'No server connection — solo only', you2: 'you',
+      colorChanged: 'Your colour was taken — here is a new one', rankToday: '#{r} in the world today', back: 'Back', me: 'me', offline: 'No server connection — solo only', you2: 'you',
     }
   };
   // Short display names for the globe badges (full names stay on the question card)
@@ -390,7 +390,7 @@
     el.opts.replaceChildren(...q.options.map((op, i) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'opt'; b.textContent = op[lang] || op.he; b.addEventListener('click', () => answer(i)); return b; }));
     el.flagwrap.classList.remove('hot'); el.prog.style.strokeDashoffset = '0';
     el.sheet.classList.add('open'); el.app.classList.add('asking'); SFX.open(); buzz(15);
-    if (attack && S.mode === 'multi') net.emit('attack', { a2, atk: S.me.pid, def: o, ts: now() });
+    if (attack && S.mode === 'multi') { net.emit('attack', { a2, atk: S.me.pid, def: o, ts: now() }); Commentator.say('attack', { p: S.me, c, v: playerOf(o) }); }
     qExtra = 0; renderPowerups();
     qStart = now(); qTicked = 0; cancelAnimationFrame(qTimer); qTimer = requestAnimationFrame(qLoop);
   }
@@ -461,18 +461,18 @@
   let lastLeader = null;
   function commentClaim(p, c, attack, victim) {
     if (!Commentator.enabled) return;
-    const big = c.area > 2e6;
-    if (attack && victim) Commentator.say('steal', { n: p.name, c: nameOf(c), v: victim.name }, 'high');
-    else Commentator.say(big ? 'claimBig' : 'claim', { n: p.name, c: nameOf(c) });
-    if (p === S.me || p.pid === S.me.pid) { if (S.streak === 3) Commentator.say('streak', { n: p.name }); }
+    if (attack && victim) Commentator.say('steal', { p, c, v: victim }, 'high');
+    else Commentator.say('claim', { p, c, big: c.area > 2e6 });
+    if (p === S.me || p.pid === S.me.pid) { if (S.streak === 3) Commentator.say('streak', { p }); }
     const pids = new Set([S.me.pid, ...Object.keys(S.players)]); const lead = [...pids].map(pid => ({ pid, s: scoreOf(pid) })).sort((a, b) => b.s - a.s)[0];
-    if (lead && lead.s > 0 && lead.pid !== lastLeader) { if (lastLeader) Commentator.say('lead', { n: playerOf(lead.pid).name }); lastLeader = lead.pid; }
+    if (lead && lead.s > 0 && lead.pid !== lastLeader) { if (lastLeader) Commentator.say('lead', { p: playerOf(lead.pid) }); lastLeader = lead.pid; }
+    (c.nb || []).slice(0, 4).forEach(n => Commentator.warmCountry(byA2[n]));
   }
   function fail(a2, attack, defender) {
     const c = byA2[a2]; S.streak = 0; el.streakChip.hidden = true; el.vignette.classList.remove('on');
     S.locked[a2] = now() + (attack ? ATTACK_LOCK_MS : LOCK_MS); S.hot.delete(a2); styleBadge(a2); refreshSelection();
     floatText(t('wrong'), 'bad');
-    if (attack && S.mode === 'multi') { net.emit('defend', { a2, atk: S.me.pid, def: defender, ts: now() }); ticker(t('youFailed', { c: nameOf(c), n: playerOf(defender).name })); }
+    if (attack && S.mode === 'multi') { net.emit('defend', { a2, atk: S.me.pid, def: defender, ts: now() }); ticker(t('youFailed', { c: nameOf(c), n: playerOf(defender).name })); Commentator.say('defend', { p: S.me, c, v: playerOf(defender) }); }
     updateHUD();
   }
   function applyClaim(d, mine) {
@@ -521,7 +521,7 @@
     const home = homeCountry(); globe.pointOfView({ lat: home.lat, lng: home.lng, altitude: S.ready ? 1.9 : 1.1 }, 1200);
     SFX.whoosh(); buzz(20); music.start(); music.setUrgent(false);
     Commentator.init({ lang, onDuck: (d) => { if (master) master.gain.value = muted ? 0 : (d ? 0.35 : 1); } }); if (mode !== 'multi' || !S.host) Commentator.setEnabled(false);
-    if (mode === 'multi' && S.host) { setTimeout(() => Commentator.say('start', {}, 'high'), (PICK_S + COUNTDOWN) * 1000); Commentator.prewarm(Object.values(S.players).map(p => p.name), lang === 'he' ? ['ישראל', 'ברזיל'] : ['Israel', 'Brazil']); }
+    if (mode === 'multi' && S.host) { setTimeout(() => Commentator.say('start', {}, 'high'), (PICK_S + COUNTDOWN) * 1000); Commentator.prewarm([S.me.color, ...Object.values(S.players).map(p => p.color)]); }
     el.tbar.style.width = '100%'; el.tbar.classList.remove('hot');
     if (!S.ready) { el.count.hidden = false; el.count.classList.add('pick'); el.countNum.textContent = ''; el.pickHint.textContent = t('pick'); }
     cancelAnimationFrame(loopT); loopT = requestAnimationFrame(loop);
@@ -601,7 +601,7 @@
       el.ranking.replaceChildren(...rows.map((r, i) => { const d = document.createElement('div'); d.className = 'rank' + (r.pid === S.me.pid ? ' me' : ''); d.style.setProperty('--c', r.p.color);
         const pos = document.createElement('span'); pos.className = 'pos'; pos.textContent = (i + 1) + '.';
         const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = r.p.name + (r.pid === S.me.pid ? ' (' + t('you') + ')' : ''); const sc = document.createElement('span'); sc.className = 'sc'; sc.textContent = r.s + ' · ' + r.n + ' 🌍'; d.append(pos, avatarEl(r.p, 'sm'), nm, sc); return d; }));
-      if (rows[0]) { ticker(t('winner', { n: rows[0].p.name })); Commentator.say('end', { n: rows[0].p.name }, 'high'); }
+      if (rows[0]) { ticker(t('winner', { n: rows[0].p.name })); Commentator.say('end', { p: rows[0].p }, 'high'); }
       el.pctLbl.textContent = (S.rank === 1 ? t('youWin') : t('place', { r: S.rank })) + ' · ' + t('ofEarth');
     } else { S.rank = 1; el.pctLbl.textContent = t('ofEarth'); }
     const pc = pctOf(S.me.pid); const ti = T[lang].titles[pc < 1 ? 0 : pc < 3 ? 1 : pc < 8 ? 2 : pc < 20 ? 3 : 4];
@@ -682,6 +682,11 @@
   function onPeers(ch) {
     S.players = {};
     for (const p of ch.peers) { const pr = p.presence || {}; if (pr.name && !p.isMe) S.players[p.peer] = { name: String(pr.name).slice(0, 14), color: COLORS.includes(pr.color) ? pr.color : '#999', host: !!pr.host }; }
+    if (!S.active && net.myPeer) { // keep colours unique inside the room: on a clash, the peer with the greater id switches
+      const others = ch.peers.filter(p => !p.isMe && p.presence && p.presence.color);
+      const clash = others.some(p => p.presence.color === S.me.color && p.peer < net.myPeer);
+      if (clash) { const used = new Set(others.map(p => p.presence.color)); const free = COLORS.find(c => !used.has(c)); if (free) { S.me.color = free; el.app.style.setProperty('--me', free); renderPickers(); net.presence({ color: free }); toast(t('colorChanged')); } }
+    }
     if (S.me.name) S.players[S.me.pid] = { name: S.me.name, color: S.me.color, host: S.host };
     renderLobby();
     const hasHost = ch.peers.some(p => p.presence && p.presence.host);
@@ -693,8 +698,8 @@
     const d = m.data || {}; if (typeof d !== 'object') return;
     if (topic === 'start') { if (!S.active) { S.host = false; const cd = clamp(+d.countdownMs || (PICK_S + COUNTDOWN) * 1000, 0, 20000); startGame('multi', +d.dur || MULTI_TIME, null, now() + cd); } }
     else if (topic === 'claim') { if (S.active && typeof d.a2 === 'string' && byA2[d.a2]) applyClaim({ a2: d.a2, pid: m.peer, ts: +d.ts || now(), prev: d.prev, bonus: clamp(+d.bonus || 0, 0, 100) }); }
-    else if (topic === 'attack') { if (S.active && byA2[d.a2] && d.def) Commentator.say('attack', { n: playerOf(m.peer).name, c: nameOf(byA2[d.a2]), v: playerOf(d.def).name }); if (S.active && d.def === S.me.pid && byA2[d.a2]) { const p = playerOf(m.peer); alertBanner(t('attacking', { n: p.name, c: nameOf(byA2[d.a2]) })); SFX.alarm(); buzz([50, 50, 50, 50, 150]); el.vignette.classList.add('danger'); setTimeout(() => el.vignette.classList.remove('danger'), 1500); } }
-    else if (topic === 'defend') { if (S.active && byA2[d.a2]) { const p = playerOf(m.peer); if (d.def) Commentator.say('defend', { n: p.name, c: nameOf(byA2[d.a2]), v: playerOf(d.def).name }); if (d.def === S.me.pid) { S.defends++; S.bonuses[S.me.pid] = (S.bonuses[S.me.pid] || 0) + 10; alertBanner(t('repelled', { c: nameOf(byA2[d.a2]), p: 10 }), true); SFX.shield(); buzz([30, 30, 30]); updateHUD(); } else if (d.def) { S.bonuses[d.def] = (S.bonuses[d.def] || 0) + 10; ticker('🛡️ ' + playerOf(d.def).name + ' ← ' + p.name); updateHUD(); } } }
+    else if (topic === 'attack') { if (S.active && byA2[d.a2] && d.def) Commentator.say('attack', { p: playerOf(m.peer), c: byA2[d.a2], v: playerOf(d.def) }); if (S.active && d.def === S.me.pid && byA2[d.a2]) { const p = playerOf(m.peer); alertBanner(t('attacking', { n: p.name, c: nameOf(byA2[d.a2]) })); SFX.alarm(); buzz([50, 50, 50, 50, 150]); el.vignette.classList.add('danger'); setTimeout(() => el.vignette.classList.remove('danger'), 1500); } }
+    else if (topic === 'defend') { if (S.active && byA2[d.a2]) { const p = playerOf(m.peer); if (d.def) Commentator.say('defend', { p, c: byA2[d.a2], v: playerOf(d.def) }); if (d.def === S.me.pid) { S.defends++; S.bonuses[S.me.pid] = (S.bonuses[S.me.pid] || 0) + 10; alertBanner(t('repelled', { c: nameOf(byA2[d.a2]), p: 10 }), true); SFX.shield(); buzz([30, 30, 30]); updateHUD(); } else if (d.def) { S.bonuses[d.def] = (S.bonuses[d.def] || 0) + 10; ticker('🛡️ ' + playerOf(d.def).name + ' ← ' + p.name); updateHUD(); } } }
     else if (topic === 'snap') { if (d.owners) { if (!S.active && !S.ended && !el.lobby.hidden) startGame('multi', +d.dur || MULTI_TIME, clamp(+d.remaining || 0, 0, 600)); if (S.active) { mergeSnapshot(d); if (!S.host && S.ready) S.t0 = now() - (S.dur - (+d.remaining || 0)) * 1000; } } }
     else if (topic === 'end') { if (S.active) { if (d.owners) mergeSnapshot(d); endGame(); } }
     else if (topic === 'react') { if (typeof d.e === 'string' && REACTS.includes(d.e)) floatReact(d.e, playerOf(m.peer)); }
