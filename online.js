@@ -63,8 +63,8 @@ window.CW = (function () {
   }
   async function addFriend(code) {
     if (!(await ready)) return { ok: false };
-    const { data, error } = await sb.rpc('cw_add_friend', { p_code: String(code || '').trim().toUpperCase() });
-    if (error) return { ok: false, error: error.message }; const f = Array.isArray(data) ? data[0] : data; return { ok: !!f, friend: f || null };
+    const { data, error } = await sb.rpc('cw_befriend', { p_code: String(code || '').trim().toUpperCase() });
+    if (error) return { ok: false, error: error.message }; const f0 = Array.isArray(data) ? data[0] : data; const f = f0 ? { id: f0.friend_id, name: f0.friend_name, color: f0.friend_color } : null; return { ok: !!f, friend: f };
   }
   async function friends() {
     if (!(await ready)) return [];

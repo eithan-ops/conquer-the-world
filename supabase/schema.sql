@@ -54,8 +54,7 @@ begin
   if auth.uid() is null then return null; end if;
   select friend_code into c from public.cw_players where id = auth.uid();
   if c is null then
-    c := upper(substr(replace(encode(gen_random_bytes(6), 'base64'), '/', 'A'), 1, 6));
-    c := translate(c, '+=0O1I', 'BCDEFG');
+    c := (select string_agg(substr('ABCDEFGHJKLMNPQRSTUVWXYZ23456789', 1 + floor(random() * 32)::int, 1), '') from generate_series(1, 6));
     update public.cw_players set friend_code = c where id = auth.uid() and friend_code is null;
     select friend_code into c from public.cw_players where id = auth.uid();
   end if;
@@ -124,16 +123,16 @@ language sql security definer set search_path = public stable as $$
   select rk, total, score from ranked where player_id = auth.uid();
 $$;
 
-create or replace function public.cw_add_friend(p_code text)
-returns table (id uuid, name text, color text)
+create or replace function public.cw_befriend(p_code text)
+returns table (friend_id uuid, friend_name text, friend_color text)
 language plpgsql security definer set search_path = public as $$
-declare f public.cw_players;
+declare f public.cw_players; me uuid := auth.uid();
 begin
-  if auth.uid() is null or not exists (select 1 from public.cw_players where id = auth.uid()) then return; end if;
-  select * into f from public.cw_players where friend_code = upper(p_code) limit 1;
-  if f.id is null or f.id = auth.uid() then return; end if;
-  insert into public.cw_friends(player_id, friend_id) values (auth.uid(), f.id) on conflict do nothing;
-  insert into public.cw_friends(player_id, friend_id) values (f.id, auth.uid()) on conflict do nothing; -- friendship is mutual
+  if me is null or not exists (select 1 from public.cw_players p where p.id = me) then return; end if;
+  select * into f from public.cw_players p where p.friend_code = upper(p_code) limit 1;
+  if f.id is null or f.id = me then return; end if;
+  insert into public.cw_friends(player_id, friend_id) values (me, f.id) on conflict do nothing;
+  insert into public.cw_friends(player_id, friend_id) values (f.id, me) on conflict do nothing; -- friendship is mutual
   return query select f.id, f.name, f.color;
 end $$;
 
@@ -143,14 +142,22 @@ language sql security definer set search_path = public stable as $$
   select p.id, p.name, p.color, p.country, p.city from public.cw_friends f join public.cw_players p on p.id = f.friend_id where f.player_id = auth.uid();
 $$;
 
-revoke execute on function public.cw_my_rank(text, text), public.cw_add_friend(text), public.cw_friends(), public.cw_runs_guard(), public.cw_my_code() from public, anon;
+revoke execute on function public.cw_my_rank(text, text), public.cw_befriend(text), public.cw_friends(), public.cw_runs_guard(), public.cw_my_code() from public, anon;
 grant execute on function public.cw_leaderboard(text, text, text) to authenticated, anon;
 grant execute on function public.cw_my_code() to authenticated;
 grant execute on function public.cw_my_rank(text, text) to authenticated;
-grant execute on function public.cw_add_friend(text) to authenticated;
+grant execute on function public.cw_befriend(text) to authenticated;
 grant execute on function public.cw_friends() to authenticated;
 
 -- Public bucket for cached commentator audio
 insert into storage.buckets (id, name, public) values ('cw-tts', 'cw-tts', true) on conflict (id) do nothing;
 drop policy if exists cw_tts_read on storage.objects;
 create policy cw_tts_read on storage.objects for select to public using (bucket_id = 'cw-tts');
+
+-- explicit grants (default privileges may not apply when run through a migration tool)
+grant usage on schema public to anon, authenticated;
+grant insert, update on public.cw_players to authenticated;
+grant select, insert on public.cw_runs to authenticated;
+grant select on public.cw_runs to anon;
+grant usage, select on sequence public.cw_runs_id_seq to authenticated;
+grant select, delete on public.cw_friends to authenticated;
