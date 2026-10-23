@@ -73,18 +73,20 @@ window.CW = (function () {
 
   /* ---------- realtime room ---------- */
   function room(code, presenceInit, handlers) {
-    if (handlers.onPeer) handlers.onPeer(uid);
-    const ch = sb.channel('cw-room-' + code.toLowerCase(), { config: { broadcast: { self: false, ack: false }, presence: { key: uid } } });
+    if (handlers.onPeer) handlers.onPeer(peerId);
+    // one peer per open tab (not per account): lets two tabs of the same browser join one room, e.g. for testing
+    const peerId = uid + '.' + Math.random().toString(36).slice(2, 7);
+    const ch = sb.channel('cw-room-' + code.toLowerCase(), { config: { broadcast: { self: false, ack: false }, presence: { key: peerId } } });
     const subs = {};
     const api = {
-      peer: uid,
-      emit(topic, data) { try { const p = ch.send({ type: 'broadcast', event: topic, payload: Object.assign({}, data, { from: uid }) }); if (p && p.catch) p.catch(() => { }); } catch (e) { } },
+      peer: peerId,
+      emit(topic, data) { try { const p = ch.send({ type: 'broadcast', event: topic, payload: Object.assign({}, data, { from: peerId }) }); if (p && p.catch) p.catch(() => { }); } catch (e) { } },
       presence(patch) { pres = Object.assign({}, pres, patch); try { const p = ch.track(pres); if (p && p.catch) p.catch(() => { }); } catch (e) { } },
-      peers() { const st = ch.presenceState(); const out = []; for (const k in st) { const p = st[k][0]; if (p) out.push({ peer: k, presence: p, isMe: k === uid }); } return out; },
+      peers() { const st = ch.presenceState(); const out = []; for (const k in st) { const p = st[k][0]; if (p) out.push({ peer: k, presence: p, isMe: k === peerId }); } return out; },
       leave() { try { sb.removeChannel(ch); } catch (e) { } },
     };
     let pres = Object.assign({}, presenceInit);
-    for (const topic of handlers.topics) ch.on('broadcast', { event: topic }, ({ payload }) => { if (!payload || payload.from === uid) return; handlers.onMsg(topic, { peer: payload.from, data: payload }); });
+    for (const topic of handlers.topics) ch.on('broadcast', { event: topic }, ({ payload }) => { if (!payload || payload.from === peerId) return; handlers.onMsg(topic, { peer: payload.from, data: payload }); });
     ch.on('presence', { event: 'sync' }, () => handlers.onPeers(api.peers()));
     ch.on('presence', { event: 'join' }, ({ newPresences }) => handlers.onJoin && handlers.onJoin(newPresences));
     return new Promise((resolve) => {
