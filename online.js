@@ -73,9 +73,9 @@ window.CW = (function () {
 
   /* ---------- realtime room ---------- */
   function room(code, presenceInit, handlers) {
-    if (handlers.onPeer) handlers.onPeer(peerId);
     // one peer per open tab (not per account): lets two tabs of the same browser join one room, e.g. for testing
     const peerId = uid + '.' + Math.random().toString(36).slice(2, 7);
+    if (handlers.onPeer) handlers.onPeer(peerId);
     const ch = sb.channel('cw-room-' + code.toLowerCase(), { config: { broadcast: { self: false, ack: false }, presence: { key: peerId } } });
     const subs = {};
     const api = {

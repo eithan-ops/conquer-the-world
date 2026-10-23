@@ -716,7 +716,7 @@
     readMe(); if (!S.me.name) { el.name.focus(); toast(t('namePh')); return false; }
     el.createBtn.disabled = el.joinGo.disabled = true;
     S.host = host; S.code = code; S.players = {};
-    const ok = await net.connect(code); el.createBtn.disabled = el.joinGo.disabled = false;
+    let ok = false; try { ok = await net.connect(code); } catch (e) { ok = false; } el.createBtn.disabled = el.joinGo.disabled = false;
     if (!ok) { toast(t(net.available === false ? 'noRoom' : 'joinFail')); el.mpNote.hidden = false; return false; }
     S.owners = {}; S.bonuses = {};
     el.codeBig.textContent = code; el.home.hidden = true; el.lobby.hidden = false; renderLobby(); SFX.open();
