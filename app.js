@@ -514,6 +514,11 @@
 
   /* ======================= game loop ======================= */
   let loopT = null, lastSec = -1, lastSnap = 0, lastCount = -1;
+  /* ----- analytics: Vercel Web Analytics (page views + custom events) and our own cw_events table ----- */
+  function track(name, props) {
+    try { window.va && window.va('event', { name, data: props || {} }); } catch (e) { }
+    try { window.CW && CW.event && CW.event(name, props || {}); } catch (e) { }
+  }
   function startGame(mode, dur, remaining, startAt) {
     S.mode = mode; S.active = true; S.ended = false; S.dur = dur;
     const rem = remaining != null ? remaining : dur;
@@ -646,6 +651,7 @@
   }
   function roundRect(x, px, py, w, h, r) { x.beginPath(); x.moveTo(px + r, py); x.arcTo(px + w, py, px + w, py + h, r); x.arcTo(px + w, py + h, px, py + h, r); x.arcTo(px, py + h, px, py, r); x.arcTo(px, py, px + w, py, r); x.closePath(); }
   async function share() {
+    track('share', { mode: S.mode });
     const txt = S.mode === 'multi' ? t('shareTextMulti', { r: S.rank || 1, p: fmtPct(pctOf(S.me.pid)) }) : t('shareText', { p: fmtPct(pctOf(S.me.pid)), c: countOf(S.me.pid), s: scoreOf(S.me.pid) });
     const url = location.origin + location.pathname;
     try {
@@ -721,10 +727,11 @@
     el.startBtn.hidden = !S.host; el.waitHost.hidden = S.host; el.startBtn.disabled = rows.length < 2;
   }
   async function createRoom() {
+    track('room_create', { lang });
     const code = Array.from({ length: 4 }, () => 'ABCDEFGHJKLMNPQRSTUVWXYZ'[Math.floor(Math.random() * 24)]).join('');
     if (!(await enterRoom(code, true))) return;
   }
-  async function joinRoom() { const code = (el.codeIn.value || '').trim().toUpperCase(); if (code.length !== 4) { el.codeIn.focus(); return; } await enterRoom(code, false); }
+  async function joinRoom() { const code = (el.codeIn.value || '').trim().toUpperCase(); if (code.length !== 4) { el.codeIn.focus(); return; } track('room_join', { lang, via: 'code' }); await enterRoom(code, false); }
   async function enterRoom(code, host) {
     readMe(); if (!S.me.name) { el.name.focus(); toast(t('namePh')); return false; }
     el.createBtn.disabled = el.joinGo.disabled = true;
@@ -744,7 +751,7 @@
   /* ======================= leaderboard ======================= */
   let bScope = 'world', bPeriod = 'today', bMode = 'solo';
   async function openBoard() {
-    el.home.hidden = true; el.board.hidden = false; SFX.open();
+    track('leaderboard_open', { lang }); el.home.hidden = true; el.board.hidden = false; SFX.open();
     const meRow = await CW.getMe(); if (meRow && meRow.friend_code) el.myCode.textContent = meRow.friend_code;
     renderBoardTabs(meRow); loadBoard();
   }
@@ -784,7 +791,8 @@
   }
   function bindUI() {
     el.langBtn.addEventListener('click', () => { lang = lang === 'he' ? 'en' : 'he'; try { localStorage.setItem('cw.lang', lang); } catch (e) { } applyLang(); SFX.tap(); });
-    el.soloBtn.addEventListener('click', () => { readMe(); if (!S.me.name) { S.me.name = lang === 'he' ? 'אני' : 'Me'; el.name.value = S.me.name; readMe(); } S.me.pid = 'me'; S.players = {}; startGame('solo', SOLO_TIME); });
+    track('visit', { lang, ref: (document.referrer || '').replace(/^https?:\/\//, '').split('/')[0] || 'direct', room: !!new URLSearchParams(location.search).get('room') });
+    el.soloBtn.addEventListener('click', () => { readMe(); if (!S.me.name) { S.me.name = lang === 'he' ? 'אני' : 'Me'; el.name.value = S.me.name; readMe(); } S.me.pid = 'me'; S.players = {}; track('solo_start', { lang }); startGame('solo', SOLO_TIME); });
     el.createBtn.addEventListener('click', createRoom);
     el.joinBtn.addEventListener('click', () => { el.joinRow.hidden = !el.joinRow.hidden; if (!el.joinRow.hidden) el.codeIn.focus(); });
     el.joinGo.addEventListener('click', joinRoom);

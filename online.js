@@ -117,5 +117,12 @@ window.CW = (function () {
   }
   async function ttsStatus() { if (!(await ready)) return false; try { const { data } = await sb.functions.invoke('tts', { body: { ping: true } }); return !!(data && data.ok); } catch (e) { return false; } }
 
-  return { ready, get uid() { return uid; }, get sb() { return sb; }, locate, savePlayer, getMe, saveRun, leaderboard, myRank, addFriend, friends, room, roomAvailable, tts, ttsStatus };
+  /* ---------- analytics events (cw_events; insert-only, read via cw_stats) ---------- */
+  const sessionId = Math.random().toString(36).slice(2, 10);
+  async function event(name, props) {
+    if (!(await ready)) return;
+    try { await sb.from('cw_events').insert({ player_id: uid, session: sessionId, name: String(name).slice(0, 40), props: props || {}, host: location.hostname }); } catch (e) { }
+  }
+
+  return { ready, get uid() { return uid; }, get sb() { return sb; }, locate, savePlayer, getMe, saveRun, leaderboard, myRank, addFriend, friends, room, roomAvailable, tts, ttsStatus, event };
 })();
