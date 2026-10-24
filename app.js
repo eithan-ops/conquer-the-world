@@ -9,7 +9,7 @@
     he: {
       title: 'לכבוש את העולם', tagline: 'ענו נכון — המדינה שלכם. כבשו כמה שיותר מכדור הארץ.',
       namePh: 'השם שלך', solo: '⚡ סולו — 90 שניות', create: '👑 פתח חדר', join: '🔑 הצטרף', joinGo: 'הצטרף',
-      howto: '❓ איך משחקים', shareSite: '📣 שתף עם חברים', terms: 'תקנון', privacy: 'פרטיות', access: 'נגישות', contact: 'צור קשר', gotIt: 'הבנתי, יאללה!',
+      howto: '❓ איך משחקים', shareSite: '📣 שתף', terms: 'תקנון', privacy: 'פרטיות', access: 'נגישות', contact: 'צור קשר', gotIt: 'הבנתי, יאללה!',
       howtoTitle: 'איך משחקים?',
       howtoSteps: ['סובבו את הגלובוס ולחצו על מדינה — תקבלו עליה שאלה.', 'עניתם נכון? המדינה נצבעת בצבע שלכם. טעיתם? היא ננעלת לכמה שניות.', 'מדינות גדולות שוות יותר נקודות — אבל השאלות עליהן קשות יותר.', 'יש 90 שניות (סולו) או 3 דקות (חברים). בדקת הזהב בסוף כל מדינה שווה כפול!', 'אספו פאוור-אפים: 50:50, +10 שניות, החלפת שאלה ומגן.', 'מול חברים: אפשר לגנוב מדינה של יריב — שאלה קשה יותר, אבל כולם ישמעו על זה מהפרשן.'],
       howtoTip: 'טיפ: בחרו מדינת פתיחה ותתפשטו לשכנות — "המשך לשכנה" חוסך זמן.',
@@ -42,7 +42,7 @@
     en: {
       title: 'Conquer the World', tagline: 'Answer right — the country is yours. Take as much of Earth as you can.',
       namePh: 'Your name', solo: '⚡ Solo — 90 seconds', create: '👑 Open a room', join: '🔑 Join', joinGo: 'Join',
-      howto: '❓ How to play', shareSite: '📣 Share with friends', terms: 'Terms', privacy: 'Privacy', access: 'Accessibility', contact: 'Contact', gotIt: 'Got it, let\'s go!',
+      howto: '❓ How to play', shareSite: '📣 Share', terms: 'Terms', privacy: 'Privacy', access: 'Accessibility', contact: 'Contact', gotIt: 'Got it, let\'s go!',
       howtoTitle: 'How to play',
       howtoSteps: ['Spin the globe and tap a country — you get a question about it.', 'Answer right and it turns your colour. Wrong? It locks for a few seconds.', 'Big countries are worth more points — but their questions are harder.', '90 seconds solo or 3 minutes with friends. In the golden minute at the end every country counts double!', 'Collect power-ups: 50:50, +10 s, swap question and shield.', 'Against friends you can steal a rival\'s country — a harder question, and the commentator tells everyone.'],
       howtoTip: 'Tip: pick a starting country and spread to its neighbours — "continue to neighbour" saves time.',
